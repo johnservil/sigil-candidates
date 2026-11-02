@@ -14,8 +14,10 @@ def layout(N, L, b):
     while not isprime(k): k -= 1
     return n, k
 def encode(a, data, b=2, marker=1):
-    N = len(a); n, k = layout(N, len(data), b)
-    w = ((marker << (8*len(data))) + int.from_bytes(data, 'big')) * k
+    """Sigil 0.1: the marker 0b01 between the data's high and low halves, times K, in base N."""
+    N = len(a); n, k = layout(N, len(data), b); half = 4 * len(data)
+    d = int.from_bytes(data, 'big')
+    w = ((((d >> half) << 2 | marker) << half) | (d & ((1 << half) - 1))) * k
     out = []
     for _ in range(n): out.append(chr(a[w % N])); w //= N
     assert w == 0
@@ -31,7 +33,7 @@ samples = [(l, encode(a, hashlib.sha256(l.encode()).digest(), 2)) for l in ('one
 samples.append(('BLAKE3 of nothing (32 bytes)', encode(a, bytes.fromhex('af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262'), 2)))
 for nb in SIZES:
     if nb != 32: samples.append((f'{nb} bytes ({8*nb}-bit)', encode(a, hashlib.sha512(str(nb).encode()).digest()[:nb], 2)))
-table = ''.join(f'<tr><td>{8*L}-bit</td><td>{layout(2048, L, 2)[0]}</td><td>1 in {layout(2048, L, 2)[1]:,}</td></tr>' for L in SIZES)
+table = ''.join(f'<tr><td>{8*L}-bit</td><td>{layout(2048, L, 2)[0]}</td><td>once in 2^{11 * layout(2048, L, 2)[0] - 8 * L}</td></tr>' for L in SIZES)
 page = f'''<!doctype html><html lang="en" translate="no"><meta charset="utf-8"><meta name="google" content="notranslate"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sigil: the alphabet the rules choose</title>
 <body class="notranslate" style="font-family:sans-serif;font-size:18px;max-width:46em;margin:1em auto;padding:0 0.6em">
@@ -41,7 +43,7 @@ page = f'''<!doctype html><html lang="en" translate="no"><meta charset="utf-8"><
 <h4>Sample sigils (256-bit unless marked)</h4>
 <div style="font-size:28px;line-height:1.6;word-break:break-all">{''.join(f'<div><span style="font-size:14px;color:#888">{html.escape(l)}</span><br>{s}</div>' for l, s in samples)}</div>
 <h4>Characters for the sizes that matter most</h4>
-<table style="border-collapse:collapse" cellpadding="4"><tr><th>data</th><th>characters</th><th>a random error passes</th></tr>{table}</table>
+<table style="border-collapse:collapse" cellpadding="4"><tr><th>data</th><th>characters</th><th>a random string decodes</th></tr>{table}</table>
 <h4>Does this device draw every letter?</h4>
 <pre id="out" style="white-space:pre-wrap">measuring...</pre>
 <h4>The whole alphabet</h4>
