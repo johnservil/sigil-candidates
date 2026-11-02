@@ -3,27 +3,14 @@ import sys, json, collections, hashlib, html
 from pathlib import Path
 sys.path.insert(0, '/workspace/sigil/alphabet'); import alphabet as A
 p = A.properties(Path('/tmp/ucd'))
-def isprime(k): return k > 1 and all(k % i for i in range(2, int(k**0.5) + 1))
-def layout(N, L, b):
-    """Fewest characters whose room holds 2^b marker values times a prime above N; the largest such prime."""
-    lk = N + 1
-    while not isprime(lk): lk += 1
-    n, pw = 0, 1
-    while (pw >> (8*L + b)) < lk: pw *= N; n += 1
-    k = pw >> (8*L + b)
-    while not isprime(k): k -= 1
-    return n, k
-def encode(a, data, b=2, marker=1):
-    """Sigil 0.1: the marker 0b01 between the data's high and low halves, times K, in base N."""
-    N = len(a); n, k = layout(N, len(data), b); half = 4 * len(data)
-    d = int.from_bytes(data, 'big')
-    w = ((((d >> half) << 2 | marker) << half) | (d & ((1 << half) - 1))) * k
-    out = []
-    for _ in range(n): out.append(chr(a[w % N])); w //= N
-    assert w == 0
-    return ''.join(reversed(out))
+sys.path.insert(0, '/workspace/sigil/python'); import sigilcode as S  # Sigil 0.1, the reference
 fontjs = Path('/workspace/sigil/fonttest.html').read_text(encoding='utf-8')
 fontjs = fontjs[fontjs.index('const c = document.createElement'):fontjs.index('</script>')]
+def layout(N, L, b=2):
+    assert N == 2048 and b == 2
+    return S.layout(L)
+def encode(a, data, b=2, marker=1):
+    return S.encode(data)
 a = sorted(map(ord, Path('/workspace/sigil/alphabet.txt').read_text(encoding='utf-8')))
 assert len(a) == 2048
 alpha = ''.join(map(chr, a))
@@ -38,7 +25,7 @@ page = f'''<!doctype html><html lang="en" translate="no"><meta charset="utf-8"><
 <title>Sigil: the alphabet the rules choose</title>
 <body class="notranslate" style="font-family:sans-serif;font-size:18px;max-width:46em;margin:1em auto;padding:0 0.6em">
 <p><a href="index.html">all candidates</a></p>
-<h3>The alphabet the rules choose: 2,048 letters</h3>
+<h3>Sigil 0.1's alphabet: 2,048 letters</h3>
 <p>{html.escape(per)}. Chosen by <a href="https://github.com/johnservil/sigil">Sigil</a>'s alphabet rules from Unicode 14.0.0 and twelve font tests (macOS, iOS, Windows, Android and Linux, in Safari, Chrome, Brave and Firefox).</p>
 <h4>Sample sigils (256-bit unless marked)</h4>
 <div style="font-size:28px;line-height:1.6;word-break:break-all">{''.join(f'<div><span style="font-size:14px;color:#888">{html.escape(l)}</span><br>{s}</div>' for l, s in samples)}</div>
