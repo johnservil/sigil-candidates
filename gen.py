@@ -48,6 +48,8 @@ variants = {
  'indic': ('Ethiopic, Canadian syllabics, 10 Indic scripts', lambda c: three(c) and sc(c) in EC + INDIC and c not in DEV_EXT),
  'indic-no-kannada': ('Ethiopic, Canadian syllabics, 9 Indic scripts (no Kannada)', lambda c: three(c) and sc(c) in EC + tuple(s for s in INDIC if s != 'Kannada') and c not in DEV_EXT),
  'vai-indic': ('Ethiopic, Canadian syllabics, Vai, 10 Indic scripts', lambda c: three(c) and sc(c) in EC + ('Vai',) + INDIC and c not in DEV_EXT),
+ 'vai-indic-georgian': ('Ethiopic, Canadian syllabics, Vai, 10 Indic scripts, Georgian', lambda c: three(c) and sc(c) in EC + ('Vai', 'Georgian') + INDIC and c not in DEV_EXT),
+ 'vai-indic-georgian-tifinagh': ('Ethiopic, Canadian syllabics, Vai, 10 Indic scripts, Georgian, Tifinagh', lambda c: three(c) and sc(c) in EC + ('Vai', 'Georgian', 'Tifinagh') + INDIC and c not in DEV_EXT),
 }
 fontjs = Path('/workspace/sigil/fonttest.html').read_text(encoding='utf-8')
 fontjs = fontjs[fontjs.index('const c = document.createElement'):fontjs.index('</script>')]
@@ -56,20 +58,19 @@ for slug, (title, ok) in variants.items():
     a = pipeline(ok); N = len(a)
     widths = collections.Counter(len(chr(c).encode()) for c in a)
     rows = []
-    for L in (16, 24, 32, 64):
-        n0, k0 = layout(N, L, 0); n3, k3 = layout(N, L, 3)
-        R = N**n0 >> (8*L); bmax = int(math.floor(math.log2(R / least_k(N))))
-        rows.append((8*L, n0, k0, bmax, n3, k3))
+    for L in (8, 10, 16, 24, 32, 64):
+        n0, k0 = layout(N, L, 0); n2, k2 = layout(N, L, 2); n3, k3 = layout(N, L, 3)
+        rows.append((8*L, n0, k0, n2, k2, n3, k3))
     print(f"{slug}: N={N:,} widths={dict(sorted(widths.items()))}")
-    for bits, n0, k0, bmax, n3, k3 in rows:
-        print(f"   {bits}-bit: {n0} chars, K {k0:,}; marker bits that fit in {n0}: {bmax}; with 3 marker bits: {n3} chars, K {k3:,}")
-    samples = [(f'{l}', encode(a, hashlib.sha256(l.encode()).digest())) for l in ('one', 'two', 'three')]
-    samples.append(('BLAKE3 of nothing (32 bytes)', encode(a, bytes.fromhex('af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262'))))
-    samples.append(('16 bytes', encode(a, hashlib.sha256(b'sixteen').digest()[:16])))
-    samples.append(('64 bytes', encode(a, hashlib.sha512(b'sixty-four').digest())))
+    for bits, n0, k0, n2, k2, n3, k3 in rows:
+        print(f"   {bits}-bit: {n0} chars; 2 marker bits {n2} (K {k2:,}); 3 marker bits {n3} (K {k3:,})")
+    samples = [(f'{l}', encode(a, hashlib.sha256(l.encode()).digest(), 2)) for l in ('one', 'two', 'three')]
+    samples.append(('BLAKE3 of nothing (32 bytes)', encode(a, bytes.fromhex('af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262'), 2)))
+    for nb in (8, 10, 16, 24, 64):
+        samples.append((f'{nb} bytes', encode(a, hashlib.sha512(str(nb).encode()).digest()[:nb], 2)))
     per = ', '.join(f"{s.replace('_Aboriginal','')} {n}" for s, n in collections.Counter(sc(c) for c in a).most_common())
     alpha = ''.join(map(chr, a))
-    table = ''.join(f'<tr><td>{b}-bit</td><td>{n0}</td><td>{bmax}</td><td>{n3}</td></tr>' for b, n0, k0, bmax, n3, k3 in rows)
+    table = ''.join(f'<tr><td>{b}-bit</td><td>{n0}</td><td>{n2} (1 in {k2:,})</td><td>{n3} (1 in {k3:,})</td></tr>' for b, n0, k0, n2, k2, n3, k3 in rows)
     page = f'''<!doctype html><html lang="en" translate="no"><meta charset="utf-8"><meta name="google" content="notranslate"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sigil candidate: {html.escape(title)}</title>
 <body class="notranslate" style="font-family:sans-serif;font-size:18px;max-width:46em;margin:1em auto;padding:0 0.6em">
@@ -78,10 +79,10 @@ for slug, (title, ok) in variants.items():
 <p>{html.escape(per)}. UTF-8 bytes a character: {", ".join(f"{k}: {v:,}" for k, v in sorted(widths.items()))}.</p>
 <h4>Does this device draw every character?</h4>
 <pre id="out" style="white-space:pre-wrap">measuring...</pre>
-<h4>Sample sigils (256-bit unless marked; 3 marker bits)</h4>
+<h4>Sample sigils (256-bit unless marked; 2 marker bits)</h4>
 <div style="font-size:28px;line-height:1.6;word-break:break-all">{''.join(f'<div><span style="font-size:14px;color:#888">{html.escape(l)}</span><br>{s}</div>' for l, s in samples)}</div>
 <h4>Characters for common sizes</h4>
-<table style="border-collapse:collapse" cellpadding="4"><tr><th>data</th><th>characters</th><th>marker bits that fit</th><th>characters with 3 marker bits</th></tr>{table}</table>
+<table style="border-collapse:collapse" cellpadding="4"><tr><th>data</th><th>characters, no marker</th><th>with 2 marker bits (a random error passes)</th><th>with 3 marker bits</th></tr>{table}</table>
 <h4>The whole alphabet</h4>
 <p style="font-size:24px;word-break:break-all">{alpha}</p>
 <script>
@@ -89,8 +90,8 @@ const ALPHABET = "{alpha}";
 {fontjs}</script>
 '''
     Path(f'/tmp/cand/{slug}.html').write_text(page, encoding='utf-8')
-    index.append((slug, title, N, rows[2][1], rows[2][4]))
-links = ''.join(f'<li><a href="{s}.html">{html.escape(t)}</a>: {N:,} characters; a 256-bit hash in {n0} (with 3 marker bits, {n3})</li>' for s, t, N, n0, n3 in index)
+    index.append((slug, title, N, rows[4][3], rows[4][5]))
+links = ''.join(f'<li><a href="{s}.html">{html.escape(t)}</a>: {N:,} characters; a 256-bit hash in {n0} characters with 2 marker bits, {n3} with 3</li>' for s, t, N, n0, n3 in index)
 Path('/tmp/cand/index.html').write_text(f'''<!doctype html><html lang="en" translate="no"><meta charset="utf-8"><meta name="google" content="notranslate"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sigil: candidate alphabets</title><body class="notranslate" style="font-family:sans-serif;font-size:18px;max-width:46em;margin:1em auto;padding:0 0.6em">
 <h3>Sigil: candidate alphabets</h3><p>Each page checks whether this device draws every character, and shows sample sigils. If your browser offers to translate a page, decline: translation replaces sigils with question marks.</p><ul>{links}</ul>''', encoding='utf-8')
