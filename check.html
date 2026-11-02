@@ -69,8 +69,10 @@ function show(list) {
     a.href = 'https://github.com/johnservil/sigil-candidates/issues/' + n; a.textContent = d; li.appendChild(a); ul.appendChild(li);
   }
   const me = describe(navigator.userAgent + (navigator.brave && !/Brave/.test(navigator.userAgent) ? ' Brave' : ''));
+  // Already tested: a result would add nothing, so the buttons go.
+  for (const id of ['send', 'copy']) document.getElementById(id).style.display = seen.has(me) ? 'none' : 'inline-block';
   document.getElementById('mine').innerHTML = seen.has(me)
-    ? `Your system and browser (<b>${me}</b>) are already tested, so there's no need to send a result. Thank you! A different system or browser helps.`
+    ? `Your system and browser (<b>${me}</b>) are already tested, so there's nothing to send. Thank you! A different system or browser helps.`
     : `Your system and browser (<b>${me}</b>) aren't tested yet. Please send your result!`;
 }
 show(STATIC);
