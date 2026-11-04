@@ -2,4 +2,4 @@
 
 The playground and test pages of Sigil 0.2, unreleased, copied from
 [johnservil/sigil](https://github.com/johnservil/sigil) at commit
-`6196ed0df9ad8500242a9b165bd299a002db0f80` (branch `v0.2`). Sigils made here may change before 0.2's release.
+`d8f485cb6f32ea0ec59a51f16f76d60e2b6f7938` (branch `v0.2`). Sigils made here may change before 0.2's release.
