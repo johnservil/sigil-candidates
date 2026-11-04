@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sigil: which layouts select a sigil whole?</title>
+<link rel="stylesheet" href="web/fonts.css">
+<link rel="stylesheet" href="web/play.css">
+<style>.case { padding: 10px 0 14px; border-top: 1px solid var(--line); } .case .s { font-size: var(--value); } #out { white-space: pre-wrap; font: 13px/1.5 ui-monospace, monospace; }</style>
+<main>
+  <h2>Which layouts select a sigil whole?</h2>
+  <p>A probe for the playground: long-press (or double-click) the sigil in each numbered case, one after another. The box at the end records what each selected; then send a screenshot of the box.</p>
+  <section class="card">
+<section class="case" data-case="1"><p class="what">1. In a sentence, as on the selection test</p>
+<p>copy this <span class="s">ᛄᗯᒅꛡኾपⷃꢢꔹടꗐᘦꚧꢯꗔᚵᖣꗘᒬᔑৎሱसቝᗰ</span> please</p></section>
+<section class="case" data-case="2"><p class="what">2. Alone in a paragraph, after a label paragraph</p>
+<p><strong>Sigil, plain</strong></p><p><span class="s">ᛄᗯᒅꛡኾपⷃꢢꔹടꗐᘦꚧꢯꗔᚵᖣꗘᒬᔑৎሱसቝᗰ</span></p></section>
+<section class="case" data-case="3"><p class="what">3. Alone in a block, its label&#x27;s text running straight into it (no space in the page&#x27;s text)</p>
+<div><strong>Sigil, plain</strong><div><span class="s">ᛄᗯᒅꛡኾपⷃꢢꔹടꗐᘦꚧꢯꗔᚵᖣꗘᒬᔑৎሱसቝᗰ</span></div></div></section>
+<section class="case" data-case="4"><p class="what">4. Alone in a block that scrolls sideways (nowrap, overflow-x: auto)</p>
+<p><strong>Sigil, plain</strong></p><div style="white-space:nowrap;overflow-x:auto"><span class="s">ᛄᗯᒅꛡኾपⷃꢢꔹടꗐᘦꚧꢯꗔᚵᖣꗘᒬᔑৎሱसቝᗰ</span></div></section>
+<section class="case" data-case="5"><p class="what">5. As 4, with user-select: all</p>
+<p><strong>Sigil, plain</strong></p><div style="white-space:nowrap;overflow-x:auto;-webkit-user-select:all;user-select:all"><span class="s">ᛄᗯᒅꛡኾपⷃꢢꔹടꗐᘦꚧꢯꗔᚵᖣꗘᒬᔑৎሱसቝᗰ</span></div></section>
+<section class="case" data-case="6"><p class="what">6. In an output element, alone in a paragraph</p>
+<p><strong>Sigil, plain</strong></p><p><output class="s">ᛄᗯᒅꛡኾपⷃꢢꔹടꗐᘦꚧꢯꗔᚵᖣꗘᒬᔑৎሱसቝᗰ</output></p></section>
+<section class="case" data-case="7"><p class="what">7. The playground&#x27;s own markup and style</p>
+<div class="form"><div class="form-head"><span><strong>Sigil, plain</strong> <span class="count">25 characters</span><br><span class="what">letters only</span></span><button type="button">Copy</button></div>
+        <output class="value s" translate="no">ᛄᗯᒅꛡኾपⷃꢢꔹടꗐᘦꚧꢯꗔᚵᖣꗘᒬᔑৎሱसቝᗰ</output></div></section>
+<section class="case" data-case="8"><p class="what">8. As 7, the hex-prefixed sigil</p>
+<div class="form"><div class="form-head"><span><strong>Sigil, hex-prefixed</strong> <span class="count">30 characters</span><br><span class="what">its first 8 hex digits, then letters</span></span><button type="button">Copy</button></div>
+        <output class="value s" translate="no">‎af1349b9ꛡኾपⷃꢢꔹടꗐᘦꚧꢯꗔᚵᖣꗘᒬᔑৎሱसቝᗰ</output></div></section>
+  </section>
+  <pre id="out" class="card">No selection yet.</pre>
+</main>
+<script>
+const results = {};
+const ua = navigator.userAgent;
+document.addEventListener('selectionchange', () => {
+  const sel = document.getSelection();
+  if (!sel || sel.isCollapsed) return;
+  const node = sel.focusNode && (sel.focusNode.nodeType === 1 ? sel.focusNode : sel.focusNode.parentElement);
+  const box = node && node.closest('[data-case]');
+  if (!box) return;
+  const want = box.querySelector('.s').textContent;
+  const got = sel.toString();
+  const n = (t) => [...t.replace(/\u200e/g, '')].length;
+  results[box.dataset.case] = got === want ? 'WHOLE'
+    : got.includes(want) ? `more: ${n(got)} characters, the sigil's ${n(want)} among them: ${JSON.stringify(got.slice(0, 40))}`
+    : `part: ${JSON.stringify(got.slice(0, 40))} (${n(got)} characters; the sigil has ${n(want)})`;
+  document.getElementById('out').textContent = ua + '\n\n' + Object.keys(results).sort((a, b) => a - b).map((k) => `${k}: ${results[k]}`).join('\n');
+});
+</script>
+</html>
